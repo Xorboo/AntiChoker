@@ -11,10 +11,10 @@ void runLeds(void *pvParameters);
 void setup()
 {
     Serial.begin(115200);
-    while (!Serial)
+    /*while (!Serial)
     {
         delay(10);
-    }
+    }*/
 
     xTaskCreatePinnedToCore(runMeasurement, "SgpTask", 10000, NULL, 1, &SgpTaskHandle, 0);
     xTaskCreatePinnedToCore(runLeds, "LedTask", 10000, NULL, 1, &LedTaskHandle, 1);
