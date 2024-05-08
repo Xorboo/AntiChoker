@@ -14,6 +14,7 @@ bool setupSgp()
     if (!sgp.begin())
     {
         Serial.println("ERROR: SGP40 Sensor not found");
+        measuredAirQuality = -1;
         sgpInitialized = false;
         return sgpInitialized;
     }
