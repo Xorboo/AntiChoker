@@ -14,20 +14,38 @@
 
 #define BOOT_LENGTH 10
 
+#define QUALITY_MIN 100.0f
+#define QUALITY_MAX 300.0f
+DEFINE_GRADIENT_PALETTE(QualityPalette){
+    0, 0, 255, 0,
+    64, 127, 255, 0,
+    128, 255, 255, 0,
+    192, 255, 127, 0,
+    255, 255, 0, 0};
+
 bool ledsInitialized = false;
 
 bool airQualityLoaded = false;
 CRGB leds[NUM_LEDS];
 uint16_t pivotIndex = 0;
+CRGBPalette16 palette = QualityPalette;
+uint32_t wavePosition = 0;
+int32_t displayAirQuality = 0;
 
 void renderError();
 void renderBoot();
 void renderQuality(int32_t airQuality);
 
+float saturate(float value)
+{
+    return max(0.0f, min(value, 1.0f));
+}
+
 bool setupLeds()
 {
     Serial.println("Initializing LEDs...");
-    FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS);
+    FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS_REAL)
+        .setCorrection(TypicalLEDStrip);
     FastLED.setMaxPowerInVoltsAndMilliamps(5, 700);
     FastLED.clear();
     FastLED.show();
@@ -51,7 +69,7 @@ void renderLeds(int32_t airQuality)
     }
     else if (!airQualityLoaded)
     {
-        if (airQuality > 80)
+        if (airQuality >= 80 )
         {
             airQualityLoaded = true;
         }
@@ -67,39 +85,38 @@ void renderLeds(int32_t airQuality)
 
 void renderError()
 {
-    for (uint8_t i = 0; i < NUM_LEDS; i++)
-    {
-        leds[i] = i == pivotIndex ? COLOR_ERROR : COLOR_NONE;
-    }
+    fill_solid(leds, NUM_LEDS, COLOR_NONE);
+    leds[pivotIndex] = COLOR_ERROR;
 }
 
 void renderBoot()
 {
-    for (uint8_t i = 0; i < NUM_LEDS; i++)
-    {
-        float distance = pivotIndex - i;
-        if (distance < 0 || distance > BOOT_LENGTH)
-        {
-            leds[i] = COLOR_NONE;
-        }
-        else
-        {
-            float value = (BOOT_LENGTH - distance) / BOOT_LENGTH;
-            value *= value;
-            CRGB bootColor = COLOR_BOOT;
-            leds[i].r = (uint8_t)(bootColor.r * value);
-            leds[i].g = (uint8_t)(bootColor.g * value);
-            leds[i].b = (uint8_t)(bootColor.b * value);
-        }
-    }
+    fadeToBlackBy(leds, NUM_LEDS, 64);
+    leds[pivotIndex] = COLOR_BOOT;
+}
+
+uint8_t scalePow(uint8_t value, uint8_t n)
+{
+    float floatValue = value / 255.0f;
+    return uint8_t(pow(floatValue, n) * 255);
 }
 
 void renderQuality(int32_t airQuality)
 {
-    int32_t fillAmount = NUM_LEDS * airQuality / 200;
+    displayAirQuality = displayAirQuality * 0.9f + airQuality * 0.1f;
+    float factor = saturate((displayAirQuality - QUALITY_MIN) / (QUALITY_MAX - QUALITY_MIN));
+    uint8_t index = (uint8_t)(factor * 240); // Some bs colors after 240 in the palette
+    CRGB qualityColor = ColorFromPalette(palette, index);
+    fill_solid(leds, NUM_LEDS, qualityColor);
 
-    for (uint8_t i = 0; i < NUM_LEDS; i++)
+    wavePosition += 2 * map(index, 0, 240, 100, 500) / 100.0f;
+    for (int i = 0; i < NUM_LEDS; i++)
     {
-        leds[i] = i <= fillAmount ? CRGB::Green : COLOR_NONE;
+        int waveIndex = (wavePosition + i * 16) % 255;
+        uint8_t scaledBrightness = scalePow(sin8(waveIndex), 5);
+        uint8_t mappedBrightness = map(scaledBrightness, 0, 255, 5, 255);
+
+        leds[i] = qualityColor;
+        leds[i].fadeToBlackBy(255 - mappedBrightness);
     }
 }

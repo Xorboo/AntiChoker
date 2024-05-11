@@ -11,6 +11,7 @@ void runLeds(void *pvParameters);
 void setup()
 {
     Serial.begin(115200);
+    delay(1000);
     /*while (!Serial)
     {
         delay(10);
@@ -35,7 +36,7 @@ void runMeasurement(void *pvParameters)
             getAirQuality();
         }
 
-        delay(1000);
+        delay(100);
     }
 }
 
