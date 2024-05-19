@@ -1,7 +1,7 @@
 #ifndef LEDS_CONTROLLER_H
 #define LEDS_CONTROLLER_H
 
-#include <FastLED.h>
+#include <Arduino.h>
 
 extern bool ledsInitialized;
 

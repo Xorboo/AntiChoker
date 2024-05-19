@@ -1,45 +1,49 @@
 #include "leds_controller.h"
 
+#include <FastLED.h>
+
 #define LED_TYPE WS2812B
 #define COLOR_ORDER GRB
+#define DATA_PIN 1
 #define NUM_LEDS_REAL 17
 #define NUM_LEDS_EXTRA 7
 #define NUM_LEDS (NUM_LEDS_REAL + NUM_LEDS_EXTRA)
-#define DATA_PIN 1
-#define BRIGHTNESS 128
+
+#define QUALITY_SMOOTH_256 32
+#define QUALITY_MIN 100.0f
+#define QUALITY_MAX 400.0f
+#define QUALITY_MIN_SPEED 2
+#define QUALITY_MAX_SPEED 12
+
+// Number of waves visible on the strip at the same time
+#define WAVES_COUNT 1
+#define WAVE_GAMMA 4
+#define BRIGHTNESS_MIN 3
 
 #define COLOR_NONE CRGB::Black
 #define COLOR_ERROR CRGB::Red
 #define COLOR_BOOT CRGB::Yellow
-
-#define BOOT_LENGTH 10
-
-#define QUALITY_MIN 100.0f
-#define QUALITY_MAX 300.0f
-DEFINE_GRADIENT_PALETTE(QualityPalette){
+DEFINE_GRADIENT_PALETTE(QualityColorPalette){
     0, 0, 255, 0,
     64, 127, 255, 0,
     128, 255, 255, 0,
     192, 255, 127, 0,
     255, 255, 0, 0};
+// Final palette color is at index 240 and not 255, so we have to adjust for that
+#define PALETTE_MAX_INDEX 240
 
 bool ledsInitialized = false;
 
 bool airQualityLoaded = false;
 CRGB leds[NUM_LEDS];
-uint16_t pivotIndex = 0;
-CRGBPalette16 palette = QualityPalette;
+uint8_t pivotIndex = 0;
+CRGBPalette16 qualityColorPalette = QualityColorPalette;
 uint32_t wavePosition = 0;
-int32_t displayAirQuality = 0;
+uint16_t displayAirQuality = 0;
 
 void renderError();
 void renderBoot();
 void renderQuality(int32_t airQuality);
-
-float saturate(float value)
-{
-    return max(0.0f, min(value, 1.0f));
-}
 
 bool setupLeds()
 {
@@ -62,14 +66,14 @@ void renderLeds(int32_t airQuality)
         return;
     }
 
-    pivotIndex = (pivotIndex + 1) % NUM_LEDS;
+    pivotIndex = addmod8(pivotIndex, 1, NUM_LEDS);
     if (airQuality < 0)
     {
         renderError();
     }
     else if (!airQualityLoaded)
     {
-        if (airQuality >= 80 )
+        if (airQuality >= 80)
         {
             airQualityLoaded = true;
         }
@@ -91,32 +95,24 @@ void renderError()
 
 void renderBoot()
 {
-    fadeToBlackBy(leds, NUM_LEDS, 64);
+    fadeLightBy(leds, NUM_LEDS, 64);
     leds[pivotIndex] = COLOR_BOOT;
-}
-
-uint8_t scalePow(uint8_t value, uint8_t n)
-{
-    float floatValue = value / 255.0f;
-    return uint8_t(pow(floatValue, n) * 255);
 }
 
 void renderQuality(int32_t airQuality)
 {
-    displayAirQuality = displayAirQuality * 0.9f + airQuality * 0.1f;
-    float factor = saturate((displayAirQuality - QUALITY_MIN) / (QUALITY_MAX - QUALITY_MIN));
-    uint8_t index = (uint8_t)(factor * 240); // Some bs colors after 240 in the palette
-    CRGB qualityColor = ColorFromPalette(palette, index);
+    displayAirQuality = lerp16by8(displayAirQuality, airQuality, QUALITY_SMOOTH_256);
+    float factor = constrain((float)(displayAirQuality - QUALITY_MIN) / (QUALITY_MAX - QUALITY_MIN), 0.0f, 1.0f);
+    uint8_t index = factor * PALETTE_MAX_INDEX;
+    CRGB qualityColor = ColorFromPalette(qualityColorPalette, index);
     fill_solid(leds, NUM_LEDS, qualityColor);
 
-    wavePosition += 2 * map(index, 0, 240, 100, 500) / 100.0f;
+    wavePosition += lerp8by8(QUALITY_MIN_SPEED, QUALITY_MAX_SPEED, 255 * factor);
+    uint8_t ledShiftAmount = WAVES_COUNT * (255 / NUM_LEDS);
     for (int i = 0; i < NUM_LEDS; i++)
     {
-        int waveIndex = (wavePosition + i * 16) % 255;
-        uint8_t scaledBrightness = scalePow(sin8(waveIndex), 5);
-        uint8_t mappedBrightness = map(scaledBrightness, 0, 255, 5, 255);
-
-        leds[i] = qualityColor;
-        leds[i].fadeToBlackBy(255 - mappedBrightness);
+        uint8_t waveIndex = (wavePosition + i * ledShiftAmount) & 0xFF;
+        uint8_t brightness = applyGamma_video(sin8(waveIndex), WAVE_GAMMA);
+        leds[i].nscale8_video(max((uint8_t)BRIGHTNESS_MIN, brightness));
     }
 }

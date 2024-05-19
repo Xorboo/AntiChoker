@@ -11,11 +11,13 @@ void runLeds(void *pvParameters);
 void setup()
 {
     Serial.begin(115200);
-    delay(1000);
-    /*while (!Serial)
+
+    int32_t serialWait = 1000;
+    while (!Serial && serialWait > 0)
     {
+        serialWait -= 10;
         delay(10);
-    }*/
+    }
 
     xTaskCreatePinnedToCore(runMeasurement, "SgpTask", 10000, NULL, 1, &SgpTaskHandle, 0);
     xTaskCreatePinnedToCore(runLeds, "LedTask", 10000, NULL, 1, &LedTaskHandle, 1);
@@ -36,7 +38,7 @@ void runMeasurement(void *pvParameters)
             getAirQuality();
         }
 
-        delay(100);
+        delay(200);
     }
 }
 
