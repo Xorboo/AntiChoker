@@ -14,8 +14,8 @@ A tiny hardware project for [Festiwal Światła](https://festiwalswiatla.hs3.pl/
 
 ### Connection
 
-- Connect Stemma QT cable (SDA, SCL, GND, 3V)
-- Connect LEDs (data pin, GND, 5V)
+- Connect SGP40 to ESP32 via Stemma QT cable (SDA, SCL, GND, 3V)
+- Connect LEDs to ESP32 (data pin, GND, 5V)
 
 ## Software
 
