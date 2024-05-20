@@ -1,12 +1,17 @@
 #include <Arduino.h>
 #include "sgp40_reader.h"
 #include "leds_controller.h"
+#include "mqtt_sender.h"
+
+#define SEND_OVER_MQTT
 
 TaskHandle_t SgpTaskHandle;
+TaskHandle_t MqttTaskHandle;
 TaskHandle_t LedTaskHandle;
 
 void runMeasurement(void *pvParameters);
 void runLeds(void *pvParameters);
+void runMqtt(void *pvParameters);
 
 void setup()
 {
@@ -21,6 +26,9 @@ void setup()
 
     xTaskCreatePinnedToCore(runMeasurement, "SgpTask", 10000, NULL, 1, &SgpTaskHandle, 0);
     xTaskCreatePinnedToCore(runLeds, "LedTask", 10000, NULL, 1, &LedTaskHandle, 1);
+#ifdef SEND_OVER_MQTT
+    xTaskCreatePinnedToCore(runMqtt, "MqttTask", 10000, NULL, 1, &MqttTaskHandle, 0);
+#endif
 }
 
 void loop() {}
@@ -50,5 +58,17 @@ void runLeds(void *pvParameters)
     {
         renderLeds(measuredAirQuality);
         delay(50);
+    }
+}
+
+void runMqtt(void *pvParameters)
+{
+    delay(5000);
+    setupMqtt();
+
+    while (true)
+    {
+        sendData(measuredAirQuality);
+        delay(5 * 1000);
     }
 }

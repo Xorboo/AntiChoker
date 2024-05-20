@@ -35,7 +35,7 @@ int32_t getAirQuality()
     }
 
     int32_t quality = sgp.measureVocIndex();
-    Serial.printf("SGP40 measurement: %d\n", quality);
+    // Serial.printf("SGP40 measurement: %d\n", quality);
     measuredAirQuality = quality;
     return measuredAirQuality;
 }
