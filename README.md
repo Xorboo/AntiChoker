@@ -6,7 +6,7 @@ A tiny hardware project for [Festiwal Światła](https://festiwalswiatla.hs3.pl/
 
 ## Hardware
 
-- ESP32. [XIAO ESP32S3](https://www.seeedstudio.com/XIAO-ESP32S3-p-5627.html) was used, but any similar chip should work. COnsider using a chip with integrated Stemma QT connector (like [Adafruit QT Py RP2040](https://www.adafruit.com/product/4900)) to avoid unnecessary soldering. Processes air quality and displays it on the LED strip (also sends over MQTT if needed)
+- ESP32. [XIAO ESP32S3](https://www.seeedstudio.com/XIAO-ESP32S3-p-5627.html) was used, but any similar chip should work. Consider using a chip with integrated Stemma QT connector (like [Adafruit QT Py RP2040](https://www.adafruit.com/product/4900)) to avoid unnecessary soldering. Processes air quality and displays it on the LED strip (also sends over MQTT if needed)
 - [Adafruit SGP40 Air Quality Sensor Breakout](https://www.adafruit.com/product/4829). Monitors air quality and gives it out in `[0-500]` range
 - Any suitable LED strip (1 LED/cm is preferrable)
 - An actual choker to attach the stip. This can potentially hold just on the led strip, but having a choker gives control over the length and a decent base
