@@ -1,7 +1,6 @@
 #include "mqtt_sender.h"
 
 #include <WiFi.h>
-#include <WiFiManager.h>
 #include <PubSubClient.h>
 
 #ifndef WIFI_SSID
@@ -32,9 +31,9 @@
 #define MQTT_PASSWORD "no_mqtt_password"
 #endif
 
-const char *mqttTopic = "sensor/air_quality";
+// MQTT topic
+const char *topic = "sensor/air_quality";
 
-WiFiManager wifiManager;
 WiFiClient espClient;
 PubSubClient client(espClient);
 
@@ -42,7 +41,6 @@ void setupWifi();
 void checkWifi();
 void waitForWifi();
 void reconnectMqtt();
-void scanNetworks();
 
 void setupMqtt()
 {
@@ -54,13 +52,6 @@ void setupMqtt()
 
 void sendData(int32_t aitQuality)
 {
-    wifiManager.process();
-    if (WiFi.status() != WL_CONNECTED)
-    {
-        Serial.println("Not connected when trying to send, quitting");
-        return;
-    }
-
     checkWifi();
 
     if (!client.connected())
@@ -71,53 +62,14 @@ void sendData(int32_t aitQuality)
 
     char msg[50];
     snprintf(msg, 50, "airQuality=%d", aitQuality);
-    Serial.printf("Publishing message: '%s'...\n", msg);
-    client.publish(mqttTopic, msg);
+    client.publish(topic, msg);
 }
 
 void setupWifi()
 {
-    WiFi.mode(WIFI_STA);
-    WiFi.disconnect();
-    scanNetworks();
-
-    // wifiManager.resetSettings();
-    wifiManager.setConfigPortalBlocking(false);
-    wifiManager.setConfigPortalTimeout(300);
-    bool connectSuccess = wifiManager.autoConnect("Antichoker", "chochoker");
-    if (connectSuccess)
-    {
-        Serial.println("WifiManager success, checking wifi");
-        waitForWifi();
-    }
-    else
-    {
-        Serial.println("WifiManager failure");
-    }
-}
-
-void scanNetworks()
-{
-    Serial.println("Scanning...");
-    int n = WiFi.scanNetworks();
-    Serial.println("Scan done:");
-    if (n == 0)
-    {
-        Serial.println("No networks found");
-        return;
-    }
-
-    Serial.printf("%d networks found\n", n);
-    for (int i = 0; i < n; ++i)
-    {
-        // Print SSID and RSSI for each network found
-        Serial.printf("[%d]\t%s (%d), %s\n",
-                      i + 1,
-                      WiFi.SSID(i).c_str(),
-                      WiFi.RSSI(i),
-                      (WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? " " : "*");
-        delay(10);
-    }
+    Serial.printf("Connecting to WiFi: %s\n", WIFI_SSID);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    waitForWifi();
 }
 
 void checkWifi()
